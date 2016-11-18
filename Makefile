@@ -23,5 +23,8 @@ lib: t2fs.o
 t2fs.o:
 	gcc -c -o $(LIB_DIR)/t2fs.o $(SRC_DIR)/t2fs.c
 
+teste1: lib
+	gcc $(TESTE_DIR)/teste1.c $(LIB_DIR)/libt2fs.a -o $(BIN_DIR)/teste
+
 clean:
 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~
