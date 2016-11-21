@@ -23,11 +23,23 @@ lib: t2fs.o superblock.o
 t2fs.o:
 	gcc -c -o $(LIB_DIR)/t2fs.o $(SRC_DIR)/t2fs.c
 
+block.o:
+	gcc -c -o $(LIB_DIR)/block.o $(SRC_DIR)/block.c
+
+inode.o:
+	gcc -c -o $(LIB_DIR)/inode.o $(SRC_DIR)/inode.c
+
 superblock.o:
 	gcc -c -o $(LIB_DIR)/superblock.o $(SRC_DIR)/superblock.c
 
 clean:
 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o
+
+blockTeste: superblock.o block.o
+	gcc $(TESTE_DIR)/block.c $(LIB_DIR)/superblock.o $(LIB_DIR)/block.o $(LIB_DIR)/apidisk.o $(LIB_DIR)/bitmap2.o -o $(BIN_DIR)/block
+
+inodeTeste: superblock.o inode.o
+	gcc $(TESTE_DIR)/inode.c $(LIB_DIR)/superblock.o $(LIB_DIR)/inode.o $(LIB_DIR)/apidisk.o -o $(BIN_DIR)/inode
 
 superblockTeste: superblock.o
 	gcc $(TESTE_DIR)/superblock.c $(LIB_DIR)/superblock.o $(LIB_DIR)/apidisk.o -o $(BIN_DIR)/superblock
