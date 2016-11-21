@@ -26,11 +26,14 @@ t2fs.o:
 superblock.o:
 	gcc -c -o $(LIB_DIR)/superblock.o $(SRC_DIR)/superblock.c
 
+clean:
+	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o
+
+superblockTeste: superblock.o
+	gcc $(TESTE_DIR)/superblock.c $(LIB_DIR)/superblock.o $(LIB_DIR)/apidisk.o -o $(BIN_DIR)/superblock
+
 teste1: lib
 	gcc $(TESTE_DIR)/teste1.c $(LIB_DIR)/libt2fs.a -o $(BIN_DIR)/teste1
 
 teste2: lib
 	gcc $(TESTE_DIR)/teste2.c $(LIB_DIR)/libt2fs.a -o $(BIN_DIR)/teste2
-
-clean:
-	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~
