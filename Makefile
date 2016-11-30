@@ -39,7 +39,7 @@ blockTeste: superblock.o block.o
 	gcc $(TESTE_DIR)/block.c $(LIB_DIR)/superblock.o $(LIB_DIR)/block.o $(LIB_DIR)/apidisk.o $(LIB_DIR)/bitmap2.o -o $(BIN_DIR)/block
 
 inodeTeste: superblock.o inode.o
-	gcc $(TESTE_DIR)/inode.c $(LIB_DIR)/superblock.o $(LIB_DIR)/inode.o $(LIB_DIR)/apidisk.o -o $(BIN_DIR)/inode
+	gcc $(TESTE_DIR)/inode.c $(LIB_DIR)/superblock.o $(LIB_DIR)/inode.o $(LIB_DIR)/apidisk.o $(LIB_DIR)/bitmap2.o -lm -o $(BIN_DIR)/inode
 
 superblockTeste: superblock.o
 	gcc $(TESTE_DIR)/superblock.c $(LIB_DIR)/superblock.o $(LIB_DIR)/apidisk.o -o $(BIN_DIR)/superblock

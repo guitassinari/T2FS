@@ -1,16 +1,62 @@
 #include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
-#include "../include/inode.h"
-#include "../include/superblock.h"
+#include <string.h>
 #include "../include/apidisk.h"
 #include "../include/t2fs.h"
 #include "../include/bool.h"
+#include "../include/bitmap2.h"
 
-static int INODE_AREA_SECTOR = NULL;
-static int INODE_AREA_SIZE = NULL;
+static int INODE_AREA_SECTOR = 0;
+static int INODE_AREA_SIZE = 0;
 
+#define EMPTY_INODE 0
+#define INODE_IN_USE 1
+
+/*
+  Lê um inode e o coloca no parametro buffer
+*/
+int readInode(int inodeIndex, struct t2fs_inode * buffer){
+  if(inodeIsEmpty(inodeIndex)) return ERROR;
+  int sectorAddress = parseInodeNumberToSectorNumber(inodeIndex);
+  int offset = inodeIndex%sectorAddress;
+  unsigned char * sectorBuffer = malloc(SECTOR_SIZE);
+  int i;
+  if(read_sector(sectorAddress, sectorBuffer) == ERROR) return ERROR;
+  memcpy(buffer, &(sectorBuffer[offset*sizeof(struct t2fs_inode)]), sizeof(struct t2fs_inode));
+  free(sectorBuffer);
+  return SUCCESS;
+}
+
+/*
+  Escreve um inode em disco no primeiro espaço vazio encontrado
+*/
+int writeInode(struct t2fs_inode * buffer){
+  int inodeIndex = searchEmptyInode();
+  if(inodeIndex == ERROR) return ERROR;
+  int sectorAddress = parseInodeNumberToSectorNumber(inodeIndex);
+  int offset = inodeIndex%sectorAddress;
+  unsigned char * sectorBuffer = malloc(SECTOR_SIZE);
+  int i;
+  if(read_sector(sectorAddress, sectorBuffer) == ERROR) return ERROR;
+  memcpy(&(sectorBuffer[offset*sizeof(struct t2fs_inode)]), buffer, sizeof(struct t2fs_inode));
+  if(write_sector(sectorAddress, sectorBuffer) == ERROR) return ERROR;
+  setInodeAsInUse(inodeIndex);
+  free(sectorBuffer);
+  return inodeIndex;
+}
+/*
+  Deletes an inode from disk
+*/
+int deleteInode(int inodeIndex){
+  setInodeAsEmpty(inodeIndex);
+}
+
+/*
+  Retorna o endereço do setor onde se inicia a area de Inodes
+*/
 int getInodeAreaSector(){
-  if(INODE_AREA_SECTOR != NULL) return INODE_AREA_SECTOR;
+  if(INODE_AREA_SECTOR != 0) return INODE_AREA_SECTOR;
   WORD * superBlockSize = malloc(sizeof(WORD));
   WORD * inodeBitmapSize = malloc(sizeof(WORD));
   WORD * blocksBitmapSize = malloc(sizeof(WORD));
@@ -24,50 +70,61 @@ int getInodeAreaSector(){
   return INODE_AREA_SECTOR;
 }
 
-int calculateInodeSector(int inodeIndex){
-  INODE_AREA_SECTOR + inodeSectorOffset(inodeIndex);
-}
-
-int inodeSectorOffset(int inodeIndex){
-  int inodesPerSector = SECTOR_SIZE/sizeof(struct t2fs_inode);
-  return Math.floor(inodeIndex/inodesPerSector);
-}
-
+/*
+  retorna o promeiro indice de inode vazio encontrado
+*/
 int searchEmptyInode(){
-
+  int inodeIndex = searchBitmap2(BITMAP_INODE, EMPTY_INODE);
+  if(inodeIndex <= 0) return ERROR;
+  return inodeIndex;
 }
 
-int setInodeAsEmpty(){
-
+/*
+  Seta o status e um índice de inode como vazio
+*/
+int setInodeAsEmpty(int inodeIndex){
+  return setInodeStatus(inodeIndex, EMPTY_INODE);
 }
 
-int setInodeAsInUse(){
-
+/*
+  Seta o status e um índice de inode como em uso
+*/
+int setInodeAsInUse(int inodeIndex){
+  return setInodeStatus(inodeIndex, INODE_IN_USE);
 }
 
-setInodeStatus(){
-  
-}
-
-int getInodeAreaSize(){
-  if(INODE_AREA_SIZE != NULL) return INODE_AREA_SIZE;
-  WORD * inodeAreaSize = malloc(sizeof(WORD));
-  getInodeAreaSize(inodeAreaSize);
-  INODE_AREA_SIZE = ((*inodeAreaSize))/SECTOR_SIZE;
-  free(inodeAreaSize);
-  return INODE_AREA_SIZE;
-}
-
-int readInode(int inodeIndex){
-  //TODO : Checar no bitmap se está valido
-  int inodeSector = calculateInodeSector(inodeIndex);
-  unsigned char * inodeBuffer = malloc(sizeof(struct t2fs_inode));
-  unsigned char * sectorBuffer = malloc(SECTOR_SIZE);
-  if(read_sector(inodeSector, sectorBuffer) == ERROR) return ERROR;
-  //TODO : encontrar inode dentro do setor. Varrer um por um com memcpy(sizeof(inode)) ??
+/*
+  Seta o status e um índice de inode (vazio ou em uso)
+*/
+int setInodeStatus(int inodeIndex, int status){
+  if(setBitmap2(BITMAP_INODE, inodeIndex, status) == 0) return ERROR;
   return SUCCESS;
 }
 
-int writeInode(int inodeNumber){
-  //TODO : Checar no bitmap se está valido
+/*
+  retorna 'true' se o indice passado estiver vazio
+*/
+int inodeIsEmpty(int inodeIndex){
+  if(checkInodeStatus(inodeIndex) == EMPTY_INODE) return true;
+  return false;
+}
+
+/*
+  retorna o status de um indice de inode
+*/
+int checkInodeStatus(int inodeIndex){
+  return getBitmap2(BITMAP_INODE, inodeIndex);
+}
+/*
+  retorna o indice do setor onde se encontro o inode de indice passado
+*/
+int parseInodeNumberToSectorNumber(int inodeIndex){
+  return getInodeAreaSector() + floor(inodeIndex/inodesPerSector());
+}
+
+/*
+  retornar o numero de inodes existentes dentro de um setor
+*/
+int inodesPerSector(){
+  return SECTOR_SIZE/sizeof(struct t2fs_inode);
 }
