@@ -12,6 +12,6 @@ int identify2 (char *name, int size){
   return SUCCESS;
 }
 
-int mkdir2 (char *pathname){
-  
+int mkdir2 (char * pathname){
+
 }
