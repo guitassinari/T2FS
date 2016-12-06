@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "../include/apidisk.h"
@@ -9,37 +8,53 @@
 #include "../include/bool.h"
 #include "../include/bitmap2.h"
 #include "../include/indexBlock.h"
+#include "../include/record.h"
 
 extern char[MAX_FILE_NAME_SIZE] currentDir = '/';
-
-//TODO: implementar HANDLES
-//TODO: abrir e fechar diretórios? Como assim? Serão como arquivos abertos?
 
 /*
   cria um novo diretório
 */
 int createDirectory(char * path){
-  char * dirPath = getDirectoryPath(path);
+  char * dirPath = getDirectoryPath(path); //transforma o caminho do diretorio em absoluto
+  char * dirName = cutDirName(path); //captura o nome do diretorio a ser criado e o remove do caminho absoluto
   struct t2fs_inode root = getRootInode();
-  strtok() //pegar tokens do path
-  searchInodeFor(root, token);
-  //TODO: varrer subdiretorios até chegar ao diretorio desejado
-  //TODO: retornar erro se algum subdiretorio não existir
+  struct t2fs_record * recordBuffer;
+  char * subDirectoryName;
+  subDirectoryName = strtok(dirPath,"/"); //Nome do primeiro subdiretorio
+  recordBuffer = searchInodeFor(root, subDirectoryName);
+  subDirectoryName = strtok(NULL,"/"); //Nome do segundo subdiretorio
+  struct t2fs_inode inodeBuffer;
+  while(subDirectoryName != NULL){ //Busca de todos os subdiretórios
+    readInode(recordBuffer->inodeNumber, inodeBuffer);
+    recordBuffer = searchInodeFor(inodeBuffer, subDirectoryName);
+    if(recordBuffer == ERROR) return ERROR;
+    subDirectoryName = strtok(NULL,"/");
+  }
+  if(recordBuffer->TypeVal == TYPEVAL_DIRETORIO){
+
+  } else return ERROR;
 }
 
+char * cutDirName(char * dirPath){
+  char * destiny = malloc(sizeof(char)*strlen(strrchr(dirPath, "/") + 1));
+  memcpy(destiny, strrchr(dirPath, "/") + 1, sizeof(char)*strlen(strrchr(dirPath, "/") + 1));
+  strrchr(dirPath, "/") = "\0"; //Remove o último '/' e o troca por fim de string, removendo o último nome de diretorio da string
+  return destiny;
+}
 
 searchInodeFor(struct t2fs_inode * inode, char * path){
   unsigned char * block;
   struct t2fs_record * record;
   if(inode->dataPtr[0] != INVALID_PTR){
     readBlock(inode->dataPtr[0], block);
-    record = searchBlockFor(block, path);
+    record = searchBlockForRecord(block, path);
   }
 
   if(record != ERROR) return record;
   if(inode->dataPtr[1] != INVALID_PTR){
     readBlock(inode->dataPtr[1], block);
-    record = searchBlockFor(block, path);
+    record = searchBlockForRecord(block, path);
   }
 
   if(record != ERROR) return record;
@@ -58,20 +73,12 @@ searchInodeFor(struct t2fs_inode * inode, char * path){
       record = searchIndexBlockFor(indexBlock, path);
     }
   }
-}
 
-
-
-/*
- ????
-*/
-int newDirectory(){
-
+  return record;
 }
 
 /*
   abre um novo diretório e o seta como diretório atual
-  TODO; Basicamente basta colocar currentDir com o caminho do diretório desejado
 */
 int openDirectory(){
 
@@ -79,7 +86,6 @@ int openDirectory(){
 
 /*
   fecha o diretório atual
-  TODO: ???? oi ??
 */
 int closeDirectory(){
 
@@ -107,20 +113,6 @@ struct t2fs_inode * createRoot(){
   rootInode->dataPtr[0] = blockAddress;
   writeRootInode(rootInode);
   return rootInode;
-}
-
-/*
-  retorna o tamanho, em BYTES, de um registro de diretório
-*/
-int recordSize(){
-  return sizeof(struct t2fs_record);
-}
-
-/*
-  retorna o número de registros que cabem dentro de um bloco
-*/
-int recordsPerBlock(){
-  return floor(blockSize()/recordSize());
 }
 
 /*
